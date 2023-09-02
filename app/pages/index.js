@@ -16,7 +16,7 @@ const Home = () => {
                     <div className={styles.todoInput}>
                         <div className={`${styles.todoCheckbox} ${styles.checked}`} />
                         <div className={styles.inputContainer}>
-                            <form onSubmit={addStaticTodo}>
+                            <form onSubmit={addTodo()}>
                                 <input value = {input} onChange={handleChange} id={styles.inputField} type="text" placeholder='Create a new todo...' />
                             </form>
                         </div>
@@ -34,9 +34,9 @@ const Home = () => {
 
             <div className={styles.mainContainer}>
                 <Loading loading={loading}>
-                    <TodoSection title="Tasks" todos={incompleteTodos} action={markStaticTodo} />
+                    <TodoSection title="Tasks" todos={incompleteTodos} action={markTodo} />
 
-                    <TodoSection title="Completed" todos={completedTodos} action={removeStaticTodo} />
+                    <TodoSection title="Completed" todos={completedTodos} action={removeTodo} />
                 </Loading>
             </div>
         </div>
