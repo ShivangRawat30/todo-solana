@@ -1,7 +1,7 @@
 import * as anchor from '@project-serum/anchor'
 import { useEffect, useMemo, useState } from 'react'
 import { TODO_PROGRAM_PUBKEY } from '../constants'
-import todoIDL from '../constants/todo.json'
+import { IDL as profileIdl } from '../constants/idl'
 import toast from 'react-hot-toast'
 import { SystemProgram } from '@solana/web3.js'
 import { utf8 } from '@project-serum/anchor/dist/cjs/utils/bytes'
@@ -25,7 +25,7 @@ export function useTodo() {
     const program = useMemo(() => {
         if (anchorWallet) {
             const provider = new anchor.AnchorProvider(connection, anchorWallet, anchor.AnchorProvider.defaultOptions())
-            return new anchor.Program(todoIDL, TODO_PROGRAM_PUBKEY, provider)
+            return new anchor.Program(profileIdl, TODO_PROGRAM_PUBKEY, provider)
         }
     }, [connection, anchorWallet])
 
@@ -76,7 +76,7 @@ export function useTodo() {
                     .accounts({
                         userProfile: profilePda,
                         authority: publicKey,
-                        systemProgram: SystemProgram.programId,
+                        SystemProgram: SystemProgram.programId,
                     })
                     .rpc()
                 setInitialized(true)
@@ -92,35 +92,33 @@ export function useTodo() {
         // then run initializeUser() from smart contract
     }
 
-    const addTodo = async() => {
+    const addTodo = async(e) => {
+        e.preventDefault();
         if(program && publicKey) {
             try{
                 setTransactionPending(true);
                 const [profilePda, profileBump] = findProgramAddressSync([utf8.encode('USER_STATE'), publicKey.toBuffer()], program.programId);
                 const [todoPda, todoBump] = findProgramAddressSync([utf8.encode('TODO_STATE'), publicKey.toBuffer(), Uint8Array.from([lastTodo])], program.programId)
 
-                const content = prompt(`Please input todo content`)
-                if(!content) {
-                    setTransactionPending(false)
-                    return
+                if(input){
+                    await program.methods
+                    .addTodo(input)
+                    .accounts({
+                        userProfile: profilePda,
+                        todoAccount: todoPda,
+                        authority: publicKey,
+                        systemProgram: SystemProgram.programId,
+                    })
+                    .rpc()
+                    toast.success('Successfully added todo')
                 }
-
-                await program.methods
-                .addTodo(content)
-                .accounts({
-                    userProfile: profilePda,
-                    todoAccount: todoPda,
-                    authority: publicKey,
-                    systemProgram: SystemProgram.programId,
-                })
-                .rpc()
-                toast.success('Successfully added todo')
 
             } catch (error) {
                 console.log(error);
-                toast.error(error.toString)
+                toast.error(error.toString())
             } finally {
                 setTransactionPending(false);
+                setInput("");
             }
         }
     }
@@ -130,7 +128,7 @@ export function useTodo() {
             try{
                 setTransactionPending(true)
                 setLoading(true)
-                const [profilePda, profileBump] = findProgramAddressSync([utf8.encode('USER_STATE'), publicKey.toBuffer()], program.programId)
+                const [profilePda, profileBump] = findProgramAddressSync([utf8.encode('USER_STATE'), publicKey.toBuffer()], program.programId);
 
                 await program.methods
                 .markTodo(todoIdx)
@@ -144,7 +142,7 @@ export function useTodo() {
                 toast.success('Successfully marked todo.')
             } catch(error){
                 console.log(error);
-                toast.success(error.toString())
+                toast.error(error.toString())
             } finally{
                 setLoading(false)
                 setTransactionPending(false)
@@ -153,25 +151,26 @@ export function useTodo() {
     }
 
     const removeTodo = async (todoPda, todoIdx) => {
-        if(program && publicKey) {
-            try{
+        if (program && publicKey) {
+            try {
                 setTransactionPending(true)
                 setLoading(true)
                 const [profilePda, profileBump] = findProgramAddressSync([utf8.encode('USER_STATE'), publicKey.toBuffer()], program.programId)
 
                 await program.methods
-                .deleteTodo(todoIdx)
-                .accounts({
-                    userProfile: profilePda,
-                    todoAccount: todoPda,
-                    authority: publicKey,
-                    systemProgram: SystemProgram.programId,
-                })
-                .rpc()
-            }catch(error){
+                    .removeTodo(todoIdx)
+                    .accounts({
+                        userProfile: profilePda,
+                        todoAccount: todoPda,
+                        authority: publicKey,
+                        systemProgram: SystemProgram.programId,
+                    })
+                    .rpc()
+                toast.success('Successfully removed todo.')
+            } catch (error) {
                 console.log(error)
                 toast.error(error.toString())
-            }finally{
+            } finally {
                 setLoading(false)
                 setTransactionPending(false)
             }
@@ -182,5 +181,5 @@ export function useTodo() {
     const incompleteTodos = useMemo(() => todos.filter((todo) => !todo.account.marked), [todos])
     const completedTodos = useMemo(() => todos.filter((todo) => todo.account.marked), [todos])
 
-    return { initialized, initializeUser,addTodo,markTodo, loading, transactionPending, completedTodos, incompleteTodos, removeTodo, input, setInput, handleChange }
+    return { initialized, initializeUser, addTodo, markTodo, loading, transactionPending, completedTodos, incompleteTodos, removeTodo, input, setInput, handleChange }
 }
